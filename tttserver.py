@@ -65,6 +65,11 @@ pool = TTTPool()
 
 
 class TTTHTTPRequestHandler(BaseHTTPRequestHandler):
+    def _reply(self, body='', code=200):
+        self.send_response(code)
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_GET(self):
         """
         Method, giving client information about game:
@@ -75,34 +80,22 @@ class TTTHTTPRequestHandler(BaseHTTPRequestHandler):
         """
         request = self.path.split('.')
         if request[2].lower() == 'help':
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(textwrap.dedent(help_text))
+            self._reply(textwrap.dedent(help_text))
         elif request[2].lower() == 'get':
             if int(request[1]) == -1:
-                self.send_response(200)
-                self.end_headers()
-                self.wfile.write('No game started. To start print "start"')
+                self._reply('No game started. To start print "start"')
                 return
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(str(pool.game_pool[int(request[1])]))
+            self._reply(str(pool.game_pool[int(request[1])]))
         elif request[2].lower() == 'info':
             if int(request[1]) < pool.games_amount:
-                self.send_response(200)
-                self.end_headers()
-                self.wfile.write(''.join(
-                    ['Game number: ', request[1], '\nPlayer 1 number: ', str(pool.game_pool[int(request[1])].players[1]),
-                     '\nPlayer 2 number: ', str(pool.game_pool[int(request[1])].players[2])]))
+                self._reply(''.join(['Game number: ', request[1], '\nPlayer 1 number: ',
+                                     str(pool.game_pool[int(request[1])].players[1]), '\nPlayer 2 number: ',
+                                     str(pool.game_pool[int(request[1])].players[2])]))
             else:
-                self.send_response(200)
-                self.end_headers()
-                self.wfile.write('Game number error')
+                self._reply('Game number error')
 
         else:
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write('Bad command. Try "get help" for help.')
+            self._reply('Bad command. Try "get help" for help.')
 
     def do_PUT(self):
         """
@@ -113,14 +106,9 @@ class TTTHTTPRequestHandler(BaseHTTPRequestHandler):
         game_field = pool.game_pool[cmd[1]].put(cmd[0], cmd[2] - 1, cmd[3] - 1)
         state = pool.game_pool[cmd[1]].state
         if state > 1:
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(
-                ''.join([game_field, '\nPrint "END" to finish the game and "start" to start new one\n']))
+            self._reply(''.join([game_field, '\nPrint "END" to finish the game and "start" to start new one\n']))
         else:
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(game_field)
+            self._reply(game_field)
 
     def do_START(self):
         """
@@ -132,10 +120,8 @@ class TTTHTTPRequestHandler(BaseHTTPRequestHandler):
             pool.players_amount += 1
             cmd[0] = pool.players_amount
         game_num = pool.add_player(cmd[0])
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write('\n'.join(
-            ['{0}.{1}.Player {0} started game {1}'.format(cmd[0], game_num), str(pool.game_pool[game_num])]))
+        self._reply(
+            '\n'.join(['{0}.{1}.Player {0} started game {1}'.format(cmd[0], game_num), str(pool.game_pool[game_num])]))
 
     def do_END(self):
         """
@@ -144,7 +130,7 @@ class TTTHTTPRequestHandler(BaseHTTPRequestHandler):
         """
         cmd = map(int, self.path.split('.'))
         pool.del_player(cmd[1], cmd[0])
-        self.send_response(200)
+        self._reply()
 
     def do_SPEC(self):
         """
@@ -153,11 +139,11 @@ class TTTHTTPRequestHandler(BaseHTTPRequestHandler):
         """
         num = int(self.path.split('.')[2])
         if num < pool.games_amount:
-            self.wfile.write(str(pool.game_pool[num]))
+            self._reply(str(pool.game_pool[num]))
         else:
-            self.wfile.write(
-                ''.join(['Game ', self.path.split('.')[2], 'is not started yet\nThere are ', str(pool.games_amount),
-                         ' games.\n']))
+            self._reply(''.join(
+                ['Game ', self.path.split('.')[2], 'is not started yet\nThere are ', str(pool.games_amount),
+                 ' games.\n']))
 
 
 def main():
