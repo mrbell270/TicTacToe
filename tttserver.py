@@ -148,7 +148,7 @@ class TTTHTTPRequestHandler(BaseHTTPRequestHandler):
 
 def main():
     print('...')
-    server_address = ('127.0.0.1', 80)  # port 80???
+    server_address = ('127.0.0.1', 8080)  # port num???
     httpd = HTTPServer(server_address, TTTHTTPRequestHandler)
     print('server is running')
     httpd.serve_forever()
