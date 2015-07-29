@@ -43,7 +43,7 @@ class TTTPlayer(object):
 
     def start(self):
         r = requests.put(
-            '/'.join(['http:/', self._ip, '.'.join([str(self.num), str(self.game_num), str(line), str(col)])]))
+            '/'.join(['http:/', self._ip, '.'.join([str(self.num), str(self.game_num), str(), str()])]))
         print(r.status_code, r.reason)
         print(r.text)
         """
