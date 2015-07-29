@@ -20,10 +20,10 @@ class TTTPlayer(object):
         :param params: str
         """
         if not len(params):
-            params='get'
-        r = requests.get('/'.join(['http:/', self._ip, '.'.join([str(self.num), str(self.game_num), params])]))
-        print(r.status_code, r.reason)
-        print(r.text)
+            params = 'get'
+        rsp = requests.get('/'.join(['http:/', self._ip, '.'.join([str(self.num), str(self.game_num), params])]))
+        print(rsp.status_code, rsp.reason)
+        print(rsp.text)
 
     def put(self, line, col):
         """
@@ -36,32 +36,26 @@ class TTTPlayer(object):
         if self.game_num == -1:
             print('No game started')
             return
-        r = requests.put(
+        rsp = requests.put(
             '/'.join(['http:/', self._ip, '.'.join([str(self.num), str(self.game_num), str(line), str(col)])]))
-        print(r.status_code, r.reason)
-        print(r.text)
+        print(rsp.status_code, rsp.reason)
+        print(rsp.text)
 
     def start(self):
-        r = requests.put(
-            '/'.join(['http:/', self._ip, '.'.join([str(self.num), str(self.game_num), str(), str()])]))
-        print(r.status_code, r.reason)
-        print(r.text)
         """
         Method to start game. If game is already started, inform player.
         If it's player's first game, give him personal number.
         """
-        # if self.game_num != -1:
-        #     print('Game {} is already started'.format(self.game_num))
-        #     return
-        # conn = httplib.HTTPConnection(self._ip)
-        # conn.request('START', '.'.join(map(str, [self.num, self.game_num])))
-        # rsp = conn.getresponse()
-        # print(rsp.status, rsp.reason)
-        # rsp_list = rsp.read().split('.')
-        # print(rsp_list[2])
-        # conn.close()
-        # self.num = int(rsp_list[0])
-        # self.game_num = int(rsp_list[1])
+        if self.game_num != -1:
+            print('Game {} is already started'.format(self.game_num))
+            return
+        rsp = requests.get(
+            '/'.join(['http:/', self._ip, '.'.join([str(self.num), str(self.game_num), 'start'])]))
+        print(rsp.status_code, rsp.reason)
+        rsp_list = rsp.text.split('.')
+        print(rsp_list[2])
+        self.num = int(rsp_list[0])
+        self.game_num = int(rsp_list[1])
 
     def end(self):
         """
@@ -70,28 +64,7 @@ class TTTPlayer(object):
         if self.game_num == -1:
             print('No game started')
             return
-        conn = httplib.HTTPConnection(self._ip)
-        conn.request('END', '.'.join(map(str, [self.num, self.game_num])))
-        rsp = conn.getresponse()
-        print(rsp.status, rsp.reason)
-        print(rsp.read())
-        conn.close()
+        rsp = requests.get('/'.join(['http:/', self._ip, '.'.join([str(self.num), str(self.game_num), 'end'])]))
+        print(rsp.status_code, rsp.reason)
+        print(rsp.text)
         self.game_num = -1
-
-    def spec(self, params):
-        """
-        Method to see field of game with number, specified in params
-        :param params: str
-        """
-        try:
-            int(params)
-        except Exception:
-            print('Wrong usage of "spec". Try "get help" for help.')
-            return
-        conn = httplib.HTTPConnection(self._ip)
-        conn.request('SPEC', str(params))
-        rsp = conn.getresponse()
-        print(rsp.status, rsp.reason)
-        print(rsp.read())
-        conn.close()
-
