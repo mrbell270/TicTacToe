@@ -55,24 +55,24 @@ class TTTGame(object):
         """
         idx = 3 * line + col
         player = self.players.index(player_num)
-        if not self.state:
+        if self.state < 1:
             return 'No opponent, can not start the game'
         if self.state > 1:
             return '\n'.join(['Game is over', str(self)])
         if self.cells[idx].sign:
             return 'Can not place chip here. Choose another cell'
-        if int(player) == self.turn:
+        if player == self.turn:
             self.cells[idx].sign = self.turn
             self.unchanged -= 1
             if self._check_state(idx) == self.turn:
                 self._state_messages.append(
                     ''.join(['Player ', str(self.turn), '(', str(self.players[self.turn]), ') won!!!']))
-                self.state = -1
+                self.state = 3
         else:
             return 'It is turn of your opponent'
-        self.turn = (self.turn % 2) + 1
         if self.unchanged == 0:
-            self.state = -2
+            self.state = 2
+        self.turn = (self.turn % 2) + 1
         return str(self)
 
     def _check_state(self, num):
@@ -97,11 +97,11 @@ class TTTGame(object):
         return ''.join([tmp, self._state_messages[self.state], '\n'])
 
 help_text = """
-"get" - see game field
-"get help" - get help
-"get info" - see game info
-"start" - start game
-"put [n] [m]" - put chip on [n] line, [m] colon
-"end" - end current game
-"spec [num]" - spectate game number [num]
+Methods of TTTPlayer
+"get()" - see game field
+"get('help')" - get help
+"get('info')" - see game info
+"start()" - start game
+"put([n], [m])" - put chip on [n] line, [m] colon
+"end()" - end current game
 """

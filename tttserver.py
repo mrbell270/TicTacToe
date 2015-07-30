@@ -7,6 +7,9 @@ from BaseHTTPServer import HTTPServer
 from tttgame import TTTGame
 from tttgame import help_text
 import textwrap
+import sys
+import hashlib
+import random
 
 
 class TTTPool(object):
@@ -15,21 +18,20 @@ class TTTPool(object):
         self.games_stack = []
         self.games_amount = 0
         self.players_stack = dict()
-        self.players_amount = 0
 
-    def add_player(self, player_num):
+    def add_player(self, player_id):
         """
         Add new player.
         If there are free players, start game between player 'player_num' and waiting player.
         If there are no free players, create new game and put player to waiting state.
-        :param player_num: int
+        :param player_id: str
         :return: int
         """
         if len(self.players_stack):
             tmp = self.players_stack.popitem()
             opponent = tmp[0]
             game_num = tmp[1]
-            self.game_pool[game_num].game_on_bitch(opponent, player_num)
+            self.game_pool[game_num].game_on_bitch(opponent, player_id)
         else:
             if len(self.games_stack):
                 game_num = self.games_stack.pop()
@@ -39,23 +41,24 @@ class TTTPool(object):
                 game_num = self.games_amount
                 self.game_pool.append(game)
                 self.games_amount += 1
-            self.players_stack[player_num] = game_num
+            self.players_stack[player_id] = game_num
+        print('Player {} connected'.format(player_id))
         return game_num
 
-    def del_player(self, game_num, player_num):
+    def del_player(self, game_num, player_id):
         """
         Exclude player 'player_num' from game 'game_num'.
         If player has no opponent, end game.
         :param game_num: int
-        :param player_num: int
+        :param player_id: str
         """
         players = self.game_pool[game_num].players
         if 0 in players:
-            del pool.players_stack[player_num]
+            del pool.players_stack[player_id]
             pool.games_stack.append(game_num)
             return
         save_player = players[1]
-        if save_player == player_num:
+        if save_player == player_id:
             save_player = players[2]
         pool.games_stack.append(game_num)
         self.add_player(save_player)
@@ -81,30 +84,30 @@ class TTTHTTPRequestHandler(BaseHTTPRequestHandler):
          - get game number and players' numbers.
         :return:
         """
-        cmd = self.path.split('.')
+        cmd = self.path.strip('/').split('.')
+        player_id = cmd[0]
+        game_num = int(cmd[1])
         if cmd[2].lower() == 'help':
             self._reply(textwrap.dedent(help_text))
         elif cmd[2].lower() == 'get':
-            if int(cmd[1]) == -1:
+            if game_num == -1:
                 self._reply('No game started. To start print "start"')
                 return
             self._reply(str(pool.game_pool[int(cmd[1])]))
         elif cmd[2].lower() == 'info':
-            if int(cmd[1]) < pool.games_amount:
+            if game_num < pool.games_amount:
                 self._reply(''.join(['Game number: ', cmd[1], '\nPlayer 1 number: ',
-                                     str(pool.game_pool[int(cmd[1])].players[1]), '\nPlayer 2 number: ',
-                                     str(pool.game_pool[int(cmd[1])].players[2])]))
+                                     str(pool.game_pool[game_num].players[1]), '\nPlayer 2 number: ',
+                                     str(pool.game_pool[game_num].players[2])]))
             else:
-                self._reply('Game number error')
+                self._reply('Game number error', 404)
         elif cmd[2].lower() == 'start':
-            if not cmd[0]:
-                pool.players_amount += 1
-                cmd[0] = pool.players_amount
-            game_num = pool.add_player(cmd[0])
-            self._reply('\n'.join(
-                ['{0}.{1}.Player {0} started game {1}'.format(cmd[0], game_num), str(pool.game_pool[game_num])]))
+            if player_id == '':
+                player_id = hashlib.sha224(str(random.randint(0, sys.maxint))).hexdigest()
+            game_num = pool.add_player(player_id)
+            self._reply('.'.join([player_id, str(game_num), str(pool.game_pool[game_num])]))
         elif cmd[2].lower() == 'end':
-            pool.del_player(cmd[1], cmd[0])
+            pool.del_player(game_num, player_id)
             self._reply()
         else:
             self._reply('Bad command. Try "get help" for help.', 404)
@@ -114,9 +117,17 @@ class TTTHTTPRequestHandler(BaseHTTPRequestHandler):
         Method, putting client's chip on field.
         :return:
         """
-        cmd = map(int, self.path.split('.'))
-        game_field = pool.game_pool[cmd[1]].put(cmd[0], cmd[2] - 1, cmd[3] - 1)
-        state = pool.game_pool[cmd[1]].state
+        cmd = self.path.strip('/').split('.')
+        try:
+            player_id = cmd[0]
+            game_num = int(cmd[1])
+            line = int(cmd[2])
+            col = int(cmd[3])
+        except:
+            self._reply('Wrong usage of "put"')
+            return
+        game_field = pool.game_pool[game_num].put(player_id, line - 1, col - 1)
+        state = pool.game_pool[game_num].state
         if state > 1:
             self._reply(''.join([game_field, '\nPrint "END" to finish the game and "start" to start new one\n']))
         else:

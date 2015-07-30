@@ -1,15 +1,14 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import httplib
 import requests
 
 
 class TTTPlayer(object):
-    def __init__(self, ip='127.0.0.1'):
+    def __init__(self, ip='127.0.0.1:8080'):
         self._ip = ip
-        self.num = 0
-        self.game_num = -1
+        self._id = ''
+        self._game_num = -1
 
     def get(self, params=''):
         """
@@ -21,7 +20,7 @@ class TTTPlayer(object):
         """
         if not len(params):
             params = 'get'
-        rsp = requests.get('/'.join(['http:/', self._ip, '.'.join([str(self.num), str(self.game_num), params])]))
+        rsp = requests.get('/'.join(['http:/', self._ip, '.'.join([self._id, str(self._game_num), params])]))
         print(rsp.status_code, rsp.reason)
         print(rsp.text)
 
@@ -33,11 +32,11 @@ class TTTPlayer(object):
         :param col: int
         :return:
         """
-        if self.game_num == -1:
+        if self._game_num == -1:
             print('No game started')
             return
         rsp = requests.put(
-            '/'.join(['http:/', self._ip, '.'.join([str(self.num), str(self.game_num), str(line), str(col)])]))
+            '/'.join(['http:/', self._ip, '.'.join([self._id, str(self._game_num), str(line), str(col)])]))
         print(rsp.status_code, rsp.reason)
         print(rsp.text)
 
@@ -46,25 +45,32 @@ class TTTPlayer(object):
         Method to start game. If game is already started, inform player.
         If it's player's first game, give him personal number.
         """
-        if self.game_num != -1:
-            print('Game {} is already started'.format(self.game_num))
+        if self._game_num != -1:
+            print('Game {} is already started'.format(self._game_num))
             return
-        rsp = requests.get(
-            '/'.join(['http:/', self._ip, '.'.join([str(self.num), str(self.game_num), 'start'])]))
+        cmd = '.'.join([self._id, str(self._game_num), 'start'])
+        rsp = requests.get('/'.join(['http:/', self._ip, cmd]))
         print(rsp.status_code, rsp.reason)
         rsp_list = rsp.text.split('.')
+        print('Player {0} started game {1}'.format(rsp_list[0], rsp_list[1]))
         print(rsp_list[2])
-        self.num = int(rsp_list[0])
-        self.game_num = int(rsp_list[1])
+        self._id = rsp_list[0]
+        self._game_num = int(rsp_list[1])
 
     def end(self):
         """
         Method to end game. If game there is no started game, inform player.
         """
-        if self.game_num == -1:
+        if self._game_num == -1:
             print('No game started')
             return
-        rsp = requests.get('/'.join(['http:/', self._ip, '.'.join([str(self.num), str(self.game_num), 'end'])]))
+        rsp = requests.get('/'.join(['http:/', self._ip, '.'.join([self._id, str(self._game_num), 'end'])]))
         print(rsp.status_code, rsp.reason)
         print(rsp.text)
-        self.game_num = -1
+        self._game_num = -1
+
+    def id(self):
+        """
+        Method to get player's id.
+        """
+        return self._id
